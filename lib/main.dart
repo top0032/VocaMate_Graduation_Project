@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
 import 'screens/auth/auth_check_screen.dart';
+import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,9 +16,10 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'VocaMate',
-      home: AuthCheckScreen(), // 💡 앱 실행 시 인증 상태 확인
+      theme: AppTheme.themeData,
+      home: const AuthCheckScreen(), // 💡 앱 실행 시 인증 상태 확인
     );
   }
 }

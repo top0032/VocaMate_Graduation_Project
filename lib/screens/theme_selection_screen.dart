@@ -1,9 +1,9 @@
-// lib/screens/theme_selection_screen.dart
 
 import 'package:flutter/material.dart';
 import '../models/theme_model.dart';
 import '../services/theme_service.dart';
 import 'learning_screen.dart';
+import '../theme.dart';
 
 class ThemeSelectionScreen extends StatefulWidget {
   const ThemeSelectionScreen({super.key});
@@ -51,35 +51,24 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
 
           final themes = snapshot.data!;
 
-          return GridView.builder(
+          return ListView.builder(
             padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 한 줄에 2개의 테마 카드
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-            ),
             itemCount: themes.length,
             itemBuilder: (context, index) {
               final theme = themes[index];
-              return InkWell(
-                onTap: () => _onThemeSelected(theme),
-                child: Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  title: Text(
+                    theme.name,
+                    style: AppTheme.themeData.textTheme.headlineSmall,
                   ),
-                  child: Center(
-                    child: Text(
-                      theme.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey,
-                      ),
-                    ),
-                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => _onThemeSelected(theme),
                 ),
               );
             },

@@ -1,16 +1,15 @@
-// lib/pages/edit_memo_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/memo.dart';
+import '../theme.dart';
 
 class EditMemoPage extends StatefulWidget {
   final Memo memo;
   final Function(Memo) onSave;
   final VoidCallback onDelete;
 
-  // const 키워드가 제거된 생성자
-  EditMemoPage({
+  const EditMemoPage({
     super.key,
     required this.memo,
     required this.onSave,
@@ -55,7 +54,7 @@ class _EditMemoPageState extends State<EditMemoPage> {
             onPressed: () => Navigator.of(context).pop('discard'), // 저장 안함
             child: const Text('저장 안함'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop('save'), // 저장
             child: const Text('저장'),
           ),
@@ -79,9 +78,8 @@ class _EditMemoPageState extends State<EditMemoPage> {
       return;
     }
 
-    // 🚨 여기서 ID 참조 오류를 수정했습니다.
     final updatedMemo = Memo(
-      id: widget.memo.id, // 부모 위젯의 memo 객체에서 ID를 가져옵니다.
+      id: widget.memo.id,
       title: _titleController.text.trim(),
       content: _contentController.text.trim(),
       createdAt: widget.memo.createdAt, // 생성일자(createdAt) 보존
@@ -105,14 +103,15 @@ class _EditMemoPageState extends State<EditMemoPage> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('취소'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               widget.onDelete();
 
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            child: const Text('삭제', style: TextStyle(color: Colors.black)),
+            child: const Text('삭제'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           ),
         ],
       ),
@@ -132,53 +131,38 @@ class _EditMemoPageState extends State<EditMemoPage> {
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: SizedBox(
-            height: 40,
-            child: TextField(
-              controller: _titleController,
-              style: const TextStyle(color: Colors.black, fontSize: 20),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '제목 없음',
-              ),
+          title: TextField(
+            controller: _titleController,
+            style: const TextStyle(color: Colors.white, fontSize: 20),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: '제목 없음',
+              hintStyle: TextStyle(color: Colors.white70),
             ),
           ),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
           actions: [
-            TextButton(
+            IconButton(
+              icon: const Icon(Icons.save),
               onPressed: _saveMemo,
-              child: const Text(
-                '저장',
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
             ),
-            TextButton(
+            IconButton(
+              icon: const Icon(Icons.delete),
               onPressed: _deleteMemo,
-              child: const Text(
-                '삭제',
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
             ),
           ],
         ),
-        body: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _contentController,
-              style: const TextStyle(fontSize: 16),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '메모 내용을 입력하세요',
-              ),
-              maxLines: null,
-              expands: true,
-              keyboardType: TextInputType.multiline,
-              autofocus: true,
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _contentController,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: '메모 내용을 입력하세요',
             ),
+            maxLines: null,
+            expands: true,
+            keyboardType: TextInputType.multiline,
+            autofocus: true,
           ),
         ),
       ),

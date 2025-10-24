@@ -1,17 +1,16 @@
-// lib/pages/memo_list_page.dart
-// 최종 수정된 목록 페이지 (역순 정렬 제거)
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/memo.dart';
 import 'add_memo_page.dart';
 import 'edit_memo_page.dart';
+import '../theme.dart';
 
 // 정렬 방식을 정의하는 enum
 enum SortOrder { recent, old, titleAZ }
 
 class MemoListPage extends StatefulWidget {
-  MemoListPage({super.key});
+  const MemoListPage({super.key});
 
   @override
   State<MemoListPage> createState() => _MemoListPageState();
@@ -82,11 +81,9 @@ class _MemoListPageState extends State<MemoListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('메모장'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<SortOrder>(
-            icon: const Icon(Icons.sort, color: Colors.white),
+            icon: const Icon(Icons.sort),
             onSelected: (SortOrder result) {
               setState(() {
                 _sortOrder = result;
@@ -119,69 +116,43 @@ class _MemoListPageState extends State<MemoListPage> {
             return Center(child: Text('데이터 오류: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('메모가 없습니다.'));
+            return const Center(
+                child: Text('메모가 없습니다. 우측 하단의 버튼으로 추가해보세요!'));
           }
 
           final memos = snapshot.data!.docs
               .map((doc) => Memo.fromFirestore(doc))
               .toList();
 
-          return GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.85,
-            ),
-            padding: const EdgeInsets.all(10),
+          return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
             itemCount: memos.length,
             itemBuilder: (context, index) {
               final memo = memos[index];
-
               return Card(
                 elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: InkWell(
-                  onTap: () => _navigateToEditMemoPage(context, memo),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          memo.title.isEmpty ? '제목이 없습니다' : memo.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: Text(
-                            memo.content,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 8,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          memo.timestamp?.toDate().toString().substring(0, 10) ?? '날짜 없음',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
+                child: ListTile(
+                  title: Text(
+                    memo.title.isEmpty ? '제목이 없습니다' : memo.title,
+                    style: AppTheme.themeData.textTheme.headlineSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  subtitle: Text(
+                    memo.content,
+                    style: AppTheme.themeData.textTheme.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(
+                    memo.timestamp?.toDate().toString().substring(0, 10) ?? '날짜 없음',
+                    style: AppTheme.themeData.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                  onTap: () => _navigateToEditMemoPage(context, memo),
                 ),
               );
             },
@@ -195,8 +166,6 @@ class _MemoListPageState extends State<MemoListPage> {
             MaterialPageRoute(builder: (context) => const AddMemoPage()),
           );
         },
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );

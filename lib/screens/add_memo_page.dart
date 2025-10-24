@@ -1,8 +1,8 @@
-// lib/pages/add_memo_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/memo.dart';
+import '../theme.dart';
 
 class AddMemoPage extends StatefulWidget {
   const AddMemoPage({super.key});
@@ -45,14 +45,12 @@ class _AddMemoPageState extends State<AddMemoPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('새 메모 작성'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         actions: [
-          TextButton(
-            onPressed: _saveMemo,
-            child: const Text(
-              '저장',
-              style: TextStyle(color: Colors.black, fontSize: 16),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ElevatedButton(
+              onPressed: _saveMemo,
+              child: const Text('저장'),
             ),
           ),
         ],
@@ -64,18 +62,17 @@ class _AddMemoPageState extends State<AddMemoPage> {
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
-                hintText: '제목을 입력하세요',
-                border: OutlineInputBorder(),
+                labelText: '제목',
               ),
               autofocus: true,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Expanded(
               child: TextField(
                 controller: _contentController,
                 decoration: const InputDecoration(
-                  hintText: '메모 내용을 입력하세요',
-                  border: OutlineInputBorder(),
+                  labelText: '내용',
+                  alignLabelWithHint: true,
                 ),
                 maxLines: null,
                 expands: true,
