@@ -1,9 +1,11 @@
-// lib/screens/learning_screen.dart
-
 import 'package:flutter/material.dart';
 import '../models/theme_model.dart';
 import '../models/word_model.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import '../services/theme_service.dart';
+
+const String _apiKey =
+    'AIzaSyBIMwEgY7epbEQ8wree_mN-rjz09TCc2-g'; // TODO: Replace with your actual API key
 
 class LearningScreen extends StatefulWidget {
   final ThemeModel theme; // 선택된 테마 정보를 받음
@@ -60,18 +62,84 @@ class _LearningScreenState extends State<LearningScreen> {
     }
   }
 
-  // TODO: 여기에 _showGeminiExample 함수를 추가하여 심화 학습 기능을 구현합니다.
-  void _showGeminiExample() {
+  void _showGeminiExample() async {
     if (_words.isEmpty) return;
     final currentWord = _words[_currentIndex];
 
-    // Gemini API 호출 로직 실행 (Cloud Functions 호출)
-    print(
-      'Gemini 심화 학습 요청: ${currentWord.word}, 테마: ${currentWord.themeId}, 난이도: ${currentWord.level}',
-    );
+    if (_apiKey.isEmpty ||
+        _apiKey == 'AIzaSyBYnhM6ymkPOa3tlTRxK-kq7tKRViwRyXA') {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gemini API 키를 설정해주세요.')));
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gemini API 호출 로직 실행! (다음 단계에서 구현 예정)')),
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
+      final content = [
+        Content.text(
+          '''Generate 3 example sentences using the English word "${currentWord.word}" with its Korean meaning "${currentWord.meaning}". Provide the output in Korean. Each example sentence should be on a new line, followed by its Korean translation on the next line. For example:
+English sentence 1.
+한국어 번역 1.
+English sentence 2.
+한국어 번역 2.
+English sentence 3.
+한국어 번역 3.''',
+        ),
+      ];
+
+      final response = await model.generateContent(content);
+      final generatedText = response.text;
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (generatedText != null) {
+          _showGeminiResultDialog(generatedText);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gemini로부터 예문을 생성하지 못했습니다.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        print('Gemini API 호출 실패: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gemini API 호출 중 오류가 발생했습니다: ${e.toString()}'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showGeminiResultDialog(String text) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Gemini 심화 학습 예문'),
+          content: SingleChildScrollView(child: Text(text)),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('닫기'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'theme_selection_screen.dart'; // 💡 이동할 테마 선택 화면 import
+import 'memo_list_page.dart'; // 💡 이동할 메모 목록 화면 import
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -39,6 +40,27 @@ class MainScreen extends StatelessWidget {
               ),
             ),
             // 💡 여기에는 다른 메뉴 버튼이 추가될 수 있습니다.
+
+            const SizedBox(height: 20),
+
+            // 💡 '메모장' 메뉴 버튼 (ElevatedButton)
+            ElevatedButton(
+              onPressed: () {
+                // 메모장 메뉴 클릭 시 메모 목록 화면으로 이동
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MemoListPage(),
+                  ),
+                );
+              },
+              child: const Text('메모장', style: TextStyle(fontSize: 20)),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(200, 60),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
           ],
         ),
       ),
