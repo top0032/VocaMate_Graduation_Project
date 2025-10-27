@@ -6,8 +6,13 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../services/theme_service.dart';
 import '../theme.dart';
 
-const String _apiKey =
-    'AIzaSyBIMwEgY7epbEQ8wree_mN-rjz09TCc2-g'; // TODO: Replace with your actual API key
+import 'package:flutter/material.dart';
+import '../models/theme_model.dart';
+import '../models/word_model.dart';
+import '../services/theme_service.dart';
+import '../theme.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LearningScreen extends StatefulWidget {
   final ThemeModel theme; // 선택된 테마 정보를 받음
@@ -66,46 +71,79 @@ class _LearningScreenState extends State<LearningScreen> {
     if (_words.isEmpty) return;
     final currentWord = _words[_currentIndex];
 
-    if (_apiKey.isEmpty ||
-        _apiKey == 'AIzaSyBYnhM6ymkPOa3tlTRxK-kq7tKRViwRyXA') {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Gemini API 키를 설정해주세요.')));
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
-      final content = [
-        Content.text(
-          '''Generate 3 example sentences using the English word "${currentWord.word}" with its Korean meaning "${currentWord.meaning}". Provide the output in Korean. Each example sentence should be on a new line, followed by its Korean translation on the next line. For example:
-English sentence 1.
-한국어 번역 1.
-English sentence 2.
-한국어 번역 2.
-English sentence 3.
-한국어 번역 3.''',
-        ),
-      ];
+      int retryCount = 0;
+      const int maxRetries = 3;
+      const Duration initialDelay = Duration(seconds: 2);
 
-      final response = await model.generateContent(content);
-      final generatedText = response.text;
+      while (retryCount < maxRetries) {
+        final response = await http.post(
+          Uri.parse('http://localhost:3000/generate-example'), // Node.js 백엔드 URL
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'word': currentWord.word,
+            'meaning': currentWord.meaning,
+          }),
+        );
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data = jsonDecode(response.body);
+          final generatedText = data['generatedText'];
 
-        if (generatedText != null) {
-          _showGeminiResultDialog(generatedText);
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+
+            if (generatedText != null) {
+              _showGeminiResultDialog(generatedText);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Gemini로부터 예문을 생성하지 못했습니다.')),
+              );
+            }
+          }
+          return; // Success, exit loop
+        } else if (response.statusCode == 503) {
+          // Model overloaded, retry after a delay
+          retryCount++;
+          print('Gemini API 호출 실패 (503 과부하): 재시도 ${retryCount}/${maxRetries}');
+          if (retryCount < maxRetries) {
+            await Future.delayed(initialDelay * retryCount);
+          } else {
+            // Max retries reached
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Gemini 서비스가 과부하되어 예문 생성을 할 수 없습니다. 잠시 후 다시 시도해주세요.')),
+              );
+            }
+            return;
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gemini로부터 예문을 생성하지 못했습니다.')),
-          );
+          // Other server errors
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          final errorMessage = errorData['error'] ?? 'Unknown error';
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            print('Gemini API 호출 실패: ${response.statusCode} - $errorMessage');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Gemini API 호출 중 오류가 발생했습니다: $errorMessage'),
+              ),
+            );
+          }
+          return; // Exit loop for non-503 errors
         }
       }
     } catch (e) {

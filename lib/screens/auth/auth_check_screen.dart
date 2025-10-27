@@ -18,29 +18,17 @@ class AuthCheckScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 앱 시작 시 잔여 세션을 강제 로그아웃하여 항상 로그아웃 상태로 시작
-    return FutureBuilder(
-      future: FirebaseAuth.instance.signOut(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    // 앱 시작 시 인증 상태 변화를 감지하여 화면 분기
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, streamSnapshot) {
+        if (streamSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // 강제 로그아웃 후, 실제 인증 상태 변화를 감지하여 화면 분기
-        return StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, streamSnapshot) {
-            if (streamSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            return _buildScreen(streamSnapshot.data);
-          },
-        );
+        return _buildScreen(streamSnapshot.data);
       },
     );
   }

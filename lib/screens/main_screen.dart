@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'theme_selection_screen.dart'; // 💡 이동할 테마 선택 화면 import
 import 'memo_list_page.dart'; // 💡 이동할 메모 목록 화면 import
@@ -26,14 +25,13 @@ class MainScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '안녕하세요!',
-              style: AppTheme.themeData.textTheme.displaySmall,
-            ),
+            Text('안녕하세요!', style: AppTheme.themeData.textTheme.displaySmall),
             const SizedBox(height: 8),
             Text(
               '오늘도 즐겁게 학습해볼까요?',
-              style: AppTheme.themeData.textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
+              style: AppTheme.themeData.textTheme.titleLarge?.copyWith(
+                color: Colors.grey[600],
+              ),
             ),
             const SizedBox(height: 32),
             Expanded(
@@ -60,9 +58,7 @@ class MainScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => MemoListPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => MemoListPage()),
                       );
                     },
                   ),
@@ -93,25 +89,16 @@ class MenuCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 48,
-              color: AppTheme.primaryColor,
-            ),
+            Icon(icon, size: 48, color: AppTheme.primaryColor),
             const SizedBox(height: 16),
-            Text(
-              title,
-              style: AppTheme.themeData.textTheme.headlineSmall,
-            ),
+            Text(title, style: AppTheme.themeData.textTheme.headlineSmall),
           ],
         ),
       ),
