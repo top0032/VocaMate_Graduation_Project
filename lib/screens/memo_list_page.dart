@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth 패키지 추가
 import '../models/memo.dart';
 import 'add_memo_page.dart';
 import 'edit_memo_page.dart';
@@ -18,11 +19,16 @@ class MemoListPage extends StatefulWidget {
 
 class _MemoListPageState extends State<MemoListPage> {
   final db = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
   SortOrder _sortOrder = SortOrder.recent; // 기본 정렬 방식
 
   // 정렬 방식에 따라 Firestore 쿼리를 동적으로 생성
   Stream<QuerySnapshot<Map<String, dynamic>>> getMemosStream() {
-    Query query = db.collection('memos');
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.empty();
+    }
+    Query query = db.collection('memos').where('userId', isEqualTo: user.uid);
     switch (_sortOrder) {
       case SortOrder.recent:
         query = query.orderBy('timestamp', descending: true);
@@ -78,6 +84,13 @@ class _MemoListPageState extends State<MemoListPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_auth.currentUser == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('메모장')),
+        body: const Center(child: Text('로그인이 필요합니다.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('메모장'),

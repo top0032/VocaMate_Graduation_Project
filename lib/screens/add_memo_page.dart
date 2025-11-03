@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth 패키지 추가
 import '../models/memo.dart';
 import '../theme.dart';
 
@@ -23,11 +24,21 @@ class _AddMemoPageState extends State<AddMemoPage> {
       return;
     }
 
+    // 현재 로그인한 사용자 정보 가져오기
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
+      return;
+    }
+
     final data = {
       'title': _titleController.text.trim(),
       'content': _contentController.text.trim(),
       'timestamp': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
+      'userId': user.uid, // 사용자 ID 추가
     };
 
     final db = FirebaseFirestore.instance;
