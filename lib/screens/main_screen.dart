@@ -2,9 +2,21 @@ import 'package:flutter/material.dart';
 import 'theme_selection_screen.dart'; // 💡 이동할 테마 선택 화면 import
 import 'memo_list_page.dart'; // 💡 이동할 메모 목록 화면 import
 import '../theme.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 💡 Firebase Auth 임포트
+import 'auth/auth_check_screen.dart'; // 💡 AuthCheckScreen 임포트
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
+
+  // 💡 로그아웃 로직
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    // 로그아웃 후 AuthCheckScreen으로 이동하여 인증 상태를 다시 확인합니다.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const AuthCheckScreen()),
+      (route) => false, // 이전 모든 라우트 제거
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +29,12 @@ class MainScreen extends StatelessWidget {
             onPressed: () {
               // TODO: 설정 화면으로 이동
             },
+          ),
+          // 💡 로그아웃 버튼 추가
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context), // 로그아웃 함수 호출
+            tooltip: '로그아웃',
           ),
         ],
       ),

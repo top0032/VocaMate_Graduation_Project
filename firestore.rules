@@ -5,5 +5,15 @@ service cloud.firestore {
       // Temporary rule for debugging
       allow read, write: if request.auth != null;
     }
+    
+    // words 컬렉션에 대한 규칙 추가
+    match /words/{wordId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // themes 컬렉션에 대한 읽기 권한 추가
+    match /themes/{themeId} {
+      allow read: if request.auth != null;
+    }
   }
 }
