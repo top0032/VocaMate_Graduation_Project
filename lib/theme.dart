@@ -2,11 +2,12 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0D47A1); // Deep Blue
-  static const Color secondaryColor = Color(0xFF455A64); // Blue Grey
+  static const Color primaryColor = Color(0xFF4A79FF);
+  static const Color secondaryColor = Color(0xFF4A79FF);
   static const Color accentColor = Color(0xFFFF6F00); // Bright Orange
-  static const Color backgroundColor = Color(0xFFF5F5F5); // Light Grey
+  static const Color backgroundColor = Color(0xFFF9F9FF); // 연한 라벤더 화이트
   static const Color textColor = Color(0xFF212121); // Dark Grey
+  static const Color darkPrimaryColor = Color(0xFF3B61CC); // Slightly darker shade for buttons
 
   static ThemeData get themeData {
     return ThemeData(
@@ -21,15 +22,16 @@ class AppTheme {
         surface: Colors.white,
         onSurface: textColor,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: Color(0xFFF9F9FF), // Lavender White
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFFF9F9FF)), // Lavender White
         titleTextStyle: TextStyle(
           fontFamily: 'Pretendard',
           fontSize: 20,
           fontWeight: FontWeight.bold,
+          color: Color(0xFFF9F9FF), // Lavender White
         ),
       ),
       textTheme: const TextTheme(
@@ -45,7 +47,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: darkPrimaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

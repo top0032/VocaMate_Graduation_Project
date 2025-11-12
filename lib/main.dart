@@ -17,6 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'VocaMate',
       theme: AppTheme.themeData,
       home: const AuthCheckScreen(), // 💡 앱 실행 시 인증 상태 확인

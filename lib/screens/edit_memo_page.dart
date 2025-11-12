@@ -132,22 +132,39 @@ class _EditMemoPageState extends State<EditMemoPage> {
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
+            key: ValueKey(widget.memo.id),
             controller: _titleController,
             style: const TextStyle(color: Colors.white, fontSize: 20),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
+            cursorColor: Colors.white, // Ensure cursor is visible and blinking
+            decoration: InputDecoration(
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.white54),
+                borderRadius: BorderRadius.circular(8),
+              ),
               hintText: '제목 없음',
-              hintStyle: TextStyle(color: Colors.white70),
+              hintStyle: TextStyle(color: Colors.white54),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Add some padding
             ),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _saveMemo,
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ElevatedButton(
+                onPressed: _saveMemo,
+                child: const Text('저장'),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteMemo,
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ElevatedButton(
+                onPressed: _deleteMemo,
+                child: const Text('삭제'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              ),
             ),
           ],
         ),
@@ -162,7 +179,6 @@ class _EditMemoPageState extends State<EditMemoPage> {
             maxLines: null,
             expands: true,
             keyboardType: TextInputType.multiline,
-            autofocus: true,
           ),
         ),
       ),
