@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart'; // 💡 kDebugMode 사용을 위해 추가
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // 💡 1. dotenv 패키지 import
 
 import '../models/theme_model.dart';
 import '../models/word_model.dart';
@@ -50,7 +51,9 @@ class _LearningScreenState extends State<LearningScreen> {
       // 한국어 음성이 있으면 설정, 없으면 기본 한국어 언어 사용
       if (koreanVoice != null) {
         // 💡 setVoice가 Map<String, String>을 기대하므로 타입을 변환해줍니다.
-        final voiceMap = Map<String, String>.from(koreanVoice.cast<String, String>());
+        final voiceMap = Map<String, String>.from(
+          koreanVoice.cast<String, String>(),
+        );
         await _flutterTts.setVoice(voiceMap);
         if (kDebugMode) {
           print("Selected TTS voice: $voiceMap");
@@ -111,7 +114,7 @@ class _LearningScreenState extends State<LearningScreen> {
     }
   }
 
-  // 💡 Gemini API 호출 (Node.js 서버 경유)
+  // 💡 Gemini API 호출 (Firebase Functions 경유)
   void _showGeminiExample() async {
     if (_words.isEmpty || _isLoading) return; // 💡 로딩 중일 때 중복 호출 방지
     final currentWord = _words[_currentIndex];
@@ -125,17 +128,40 @@ class _LearningScreenState extends State<LearningScreen> {
       const int maxRetries = 3;
       const Duration initialDelay = Duration(seconds: 2);
 
-      // 💡 Android 에뮬레이터에서 localhost에 접근하기 위한 호스트 주소 설정
+      // 💡 2. .env 파일에서 Firebase URL 읽어오기
+      final String? baseUrl = dotenv.env['API_BASE_URL'];
+
+      // 💡 3. .env 파일에 URL이 설정되었는지 확인
+      if (baseUrl == null || baseUrl.isEmpty) {
+        if (kDebugMode) {
+          print('오류: .env 파일에 API_BASE_URL이 설정되지 않았습니다.');
+        }
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('.env 파일에 API URL이 설정되지 않았습니다.')),
+          );
+        }
+        return; // 함수 종료
+      }
+
+      // 💡 4. 최종 URL 조합 (예: https://.../api/generate-example)
+      final String finalUrl = '$baseUrl/generate-example';
+
+      // 💡 5. getApiUrl() 함수 삭제 (더 이상 필요 없음)
+      /*
       String getApiUrl() {
         if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
           return 'http://10.0.2.2:3000/generate-example';
         }
         return 'http://localhost:3000/generate-example';
       }
+      */
 
       while (retryCount < maxRetries) {
         final response = await http.post(
-          Uri.parse(getApiUrl()), // 💡 수정된 URL 사용
+          // 💡 6. 하드코딩된 주소 대신 finalUrl 변수 사용
+          Uri.parse(finalUrl),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
           },
@@ -272,7 +298,8 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   Widget build(BuildContext context) {
     // 💡 _isLoading이 true일 때 로딩 인디케이터를 먼저 표시
-    if (_isLoading && _words.isEmpty) { // 💡 단어 로딩 중에만 전체 화면 로딩
+    if (_isLoading && _words.isEmpty) {
+      // 💡 단어 로딩 중에만 전체 화면 로딩
       return Scaffold(
         appBar: AppBar(title: Text('${widget.theme.name} 학습')),
         body: const Center(child: CircularProgressIndicator()),
@@ -283,7 +310,8 @@ class _LearningScreenState extends State<LearningScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text('${widget.theme.name} 학습')),
-      body: Stack( // 💡 로딩 인디케이터를 위에 띄우기 위해 Stack 사용
+      body: Stack(
+        // 💡 로딩 인디케이터를 위에 띄우기 위해 Stack 사용
         children: [
           Center(
             child: _words.isEmpty
@@ -301,34 +329,34 @@ class _LearningScreenState extends State<LearningScreen> {
                           duration: const Duration(milliseconds: 500),
                           transitionBuilder:
                               (Widget child, Animation<double> animation) {
-                            final rotateAnim = Tween(
-                              begin: 3.14,
-                              end: 0.0,
-                            ).animate(animation);
-                            return AnimatedBuilder(
-                              animation: rotateAnim,
-                              child: child,
-                              builder: (context, child) {
-                                final isUnder =
-                                    (ValueKey(_isFlipped) != child!.key);
-                                var tilt =
-                                    ((animation.value - 0.5).abs() - 0.5) *
-                                        0.003;
-                                tilt *= isUnder ? -1.0 : 1.0;
-                                final value = isUnder
-                                    ? rotateAnim.value < (3.14 / 2)
-                                        ? rotateAnim.value
-                                        : 3.14 - rotateAnim.value
-                                    : rotateAnim.value;
-                                return Transform(
-                                  transform: Matrix4.rotationY(value)
-                                    ..setEntry(3, 0, tilt),
+                                final rotateAnim = Tween(
+                                  begin: 3.14,
+                                  end: 0.0,
+                                ).animate(animation);
+                                return AnimatedBuilder(
+                                  animation: rotateAnim,
                                   child: child,
-                                  alignment: Alignment.center,
+                                  builder: (context, child) {
+                                    final isUnder =
+                                        (ValueKey(_isFlipped) != child!.key);
+                                    var tilt =
+                                        ((animation.value - 0.5).abs() - 0.5) *
+                                        0.003;
+                                    tilt *= isUnder ? -1.0 : 1.0;
+                                    final value = isUnder
+                                        ? rotateAnim.value < (3.14 / 2)
+                                              ? rotateAnim.value
+                                              : 3.14 - rotateAnim.value
+                                        : rotateAnim.value;
+                                    return Transform(
+                                      transform: Matrix4.rotationY(value)
+                                        ..setEntry(3, 0, tilt),
+                                      child: child,
+                                      alignment: Alignment.center,
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
                           // 💡 currentWord가 null이 아님을 보장 (위에서 _words.isEmpty로 체크)
                           child: _isFlipped
                               ? FlashCard(
@@ -379,9 +407,7 @@ class _LearningScreenState extends State<LearningScreen> {
           if (_isLoading && _words.isNotEmpty)
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),

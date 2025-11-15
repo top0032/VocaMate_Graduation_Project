@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ⬇️ "인터넷 권한"이 한 줄 추가되었습니다! ⬇️ -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ⬆️ Failed to fetch 오류를 해결하기 위해 이 줄이 필수입니다. ⬆️ -->
+
     <application
         android:label="flutter_application_1"
         android:name="${applicationName}"
