@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'theme_selection_screen.dart'; // 이동할 테마 선택 화면
 import 'memo_list_page.dart'; // 이동할 메모 목록 화면
+import 'quiz_theme_selection_screen.dart'; // 💡 퀴즈 테마 선택 화면
 import 'admin/admin_screen.dart'; // 💡 관리자 대시보드 화면 (추가됨)
 import '../theme.dart';
 import 'auth/auth_check_screen.dart'; // 로그아웃 후 이동할 화면
@@ -118,6 +119,17 @@ class _MainScreenState extends State<MainScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => MemoListPage()),
+                      );
+                    },
+                  ),
+                  // 💡 퀴즈 메뉴 카드 추가
+                  MenuCard(
+                    title: '퀴즈',
+                    icon: Icons.quiz,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const QuizThemeSelectionScreen()),
                       );
                     },
                   ),

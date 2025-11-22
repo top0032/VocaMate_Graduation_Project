@@ -6,7 +6,10 @@ class WordModel {
   final String word;
   final String meaning;
   final String level;
-  final List<String> tags; // 💡 tags 필드 추가
+  final List<String> tags;
+  final String partOfSpeech; // 품사
+  final String phoneticUK;   // 영국식 발음
+  final String phoneticUS;   // 미국식 발음
 
   WordModel({
     required this.id,
@@ -14,7 +17,10 @@ class WordModel {
     required this.word,
     required this.meaning,
     required this.level,
-    this.tags = const [], // 💡 기본값으로 빈 리스트 설정
+    this.tags = const [],
+    this.partOfSpeech = '',
+    this.phoneticUK = '',
+    this.phoneticUS = '',
   });
 
   // Firestore 문서 데이터를 Dart 객체로 변환하는 팩토리
@@ -24,9 +30,11 @@ class WordModel {
       themeId: map['themeId'] ?? '',
       word: map['word'] ?? '',
       meaning: map['meaning'] ?? '',
-      level: map['level']?.toString() ?? '초급', // 💡 level을 문자열로 변환
-      // 💡 Firestore의 'tags' 필드(리스트)를 Dart의 List<String>으로 변환
+      level: map['level']?.toString() ?? '초급',
       tags: List<String>.from(map['tags'] ?? []),
+      partOfSpeech: map['partOfSpeech'] ?? '',
+      phoneticUK: map['phoneticUK'] ?? '',
+      phoneticUS: map['phoneticUS'] ?? '',
     );
   }
 }

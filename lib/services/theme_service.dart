@@ -98,6 +98,9 @@ class ThemeService {
         final meaning = wordData['meaning']?.toString().trim();
         final level = wordData['level']?.toString().trim() ?? '초급';
         final tags = List<String>.from(wordData['tags'] ?? []);
+        final partOfSpeech = wordData['partOfSpeech']?.toString().trim() ?? '';
+        final phoneticUK = wordData['phoneticUK']?.toString().trim() ?? '';
+        final phoneticUS = wordData['phoneticUS']?.toString().trim() ?? '';
 
         if (word != null && meaning != null && word.isNotEmpty && meaning.isNotEmpty) {
           final wordRef = _db.collection('words').doc();
@@ -107,6 +110,9 @@ class ThemeService {
             'meaning': meaning,
             'level': level,
             'tags': tags,
+            'partOfSpeech': partOfSpeech,
+            'phoneticUK': phoneticUK,
+            'phoneticUS': phoneticUS,
             'createdAt': FieldValue.serverTimestamp(),
           });
           importedCount++;
