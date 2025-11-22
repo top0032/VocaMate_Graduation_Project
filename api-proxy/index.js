@@ -1,57 +1,105 @@
 const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const cors = require('cors');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const textToSpeech = require('@google-cloud/text-to-speech');
 
-// 1. express 앱 초기화
+admin.initializeApp();
+
 const app = express();
-
-// 2. CORS 및 JSON 파서 사용
-//    (중요: Functions에서 CORS는 필수입니다)
-app.use(cors({ origin: true })); 
+app.use(cors({ origin: true }));
 app.use(express.json());
 
-// 3. API 키 가져오기 (dotenv 대신 functions.config() 사용)
-//    보안을 위해 functions.config()에서 키를 불러옵니다.
-const GEMINI_API_KEY = functions.config().gemini.key;
+// API 키 설정
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || functions.config().gemini?.key;
 
-// API 키가 Firebase 환경 변수에 설정되지 않았다면 오류를 발생시킵니다.
-if (!GEMINI_API_KEY) {
-  console.error('GEMINI_API_KEY is not set in Firebase config.');
-  // 참고: 여기서는 process.exit(1)을 사용하지 않습니다.
-}
+// 클라이언트 초기화
+const ttsClient = new textToSpeech.TextToSpeechClient();
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-// 4. 학생분의 API 라우트 (기존 코드와 100% 동일)
+// ==========================================
+// 1. Gemini 예문 생성 API (프롬프트 강력 수정)
+// ==========================================
 app.post('/generate-example', async (req, res) => {
-  const { word, meaning } = req.body;
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'Server Error: API Key is missing.' });
+  }
 
+  const { word, meaning } = req.body;
   if (!word || !meaning) {
     return res.status(400).json({ error: 'Word and meaning are required.' });
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    const prompt = `Generate 3 example sentences using the English word "${word}" with its Korean meaning "${meaning}". Provide the output in Korean. Each example sentence should be on a new line, followed by its Korean translation on the next line. For example:
-English sentence 1.
-한국어 번역 1.
-English sentence 2.
-한국어 번역 2.
-English sentence 3.
-한국어 번역 3.`;
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    // 1.5-pro 모델 사용 (지시 이행 능력이 좋음)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    
+    // 💡 [수정된 프롬프트] 원하는 출력 형식을 예시와 함께 명확히 제시
+    const prompt = `
+    Role: Professional English Teacher.
+    Task: Create sentences for the word "${word}" (meaning: "${meaning}") at 3 difficulty levels.
+    
+    Strict Output Format Rules:
+    1. Do NOT add any introductory text or markdown like "**".
+    2. Provide exactly 3 sets (Beginner, Intermediate, Advanced).
+    3. The format must be exactly as follows:
+
+    [초급]
+    (Write a simple English sentence here)
+    (Write the Korean translation here)
+
+    [중급]
+    (Write a business/daily English sentence here)
+    (Write the Korean translation here)
+
+    [고급]
+    (Write a formal/academic English sentence here)
+    (Write the Korean translation here)
+    `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
     res.json({ generatedText: text });
+
   } catch (error) {
     console.error('Gemini API call failed:', error);
-    res.status(500).json({ error: 'Failed to generate example from Gemini API.', details: error.message });
+    res.status(500).json({ error: 'Failed to generate example.', details: error.message });
   }
 });
 
-// 5. (가장 중요) app.listen() 대신
-//    Express 앱을 'api'라는 이름의 HTTPS 함수로 export 합니다.
+// ==========================================
+// 2. 고품질 TTS 생성 API (기존 유지)
+// ==========================================
+app.post('/generate-speech', async (req, res) => {
+  const { text, speed } = req.body;
+  if (!text) return res.status(400).json({ error: 'Missing text' });
+
+  const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(text);
+
+  let languageCode = 'en-US';
+  let voiceName = 'en-US-Neural2-D';
+
+  if (hasKorean) {
+    languageCode = 'ko-KR';
+    voiceName = 'ko-KR-Neural2-C'; 
+  }
+
+  const request = {
+    input: { text: text },
+    voice: { languageCode: languageCode, name: voiceName },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: speed || 1.0 },
+  };
+
+  try {
+    const [response] = await ttsClient.synthesizeSpeech(request);
+    res.json({ audioContent: response.audioContent.toString('base64') });
+  } catch (error) {
+    console.error('TTS Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 exports.api = functions.https.onRequest(app);

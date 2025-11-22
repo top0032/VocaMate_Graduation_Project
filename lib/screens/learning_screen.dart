@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // kDebugMode 사용
+import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../models/theme_model.dart';
 import '../models/word_model.dart';
@@ -20,7 +20,7 @@ class LearningScreen extends StatefulWidget {
 
 class _LearningScreenState extends State<LearningScreen> {
   final ThemeService _themeService = ThemeService();
-  final FlutterTts _flutterTts = FlutterTts();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<WordModel> _words = [];
   bool _isLoading = true;
@@ -30,31 +30,53 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeTts();
     _loadWords();
-  }
-
-  // TTS 초기화 (영어 전용 설정)
-  Future<void> _initializeTts() async {
-    try {
-      await _flutterTts.setLanguage("en-US");
-      await _flutterTts.setSpeechRate(0.7);
-      await _flutterTts.setPitch(1.0);
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error initializing TTS: $e");
-      }
-    }
-  }
-
-  Future<void> _speak(String text) async {
-    await _flutterTts.speak(text);
   }
 
   @override
   void dispose() {
-    _flutterTts.stop();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  // TTS 실행 함수 (속도 조절 가능)
+  Future<void> _speak(String text, {double speed = 1.0}) async {
+    if (text.isEmpty) return;
+
+    // 💡 재생 전 기존 오디오 정지 (겹침 방지)
+    await _audioPlayer.stop();
+
+    try {
+      // API URL 설정
+      String getTtsApiUrl() {
+        if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
+          // 로컬 에뮬레이터용 (필요시 사용)
+          return 'http://10.0.2.2:5001/voca-33a1c/us-central1/api/generate-speech';
+        }
+        // 💡 실제 배포된 URL (반드시 본인의 배포된 주소인지 확인!)
+        return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generate-speech';
+      }
+
+      final response = await http.post(
+        Uri.parse(getTtsApiUrl()),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text, 'speed': speed}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        String base64Audio = data['audioContent'];
+
+        if (base64Audio.isNotEmpty) {
+          final bytes = base64Decode(base64Audio);
+          await _audioPlayer.play(BytesSource(bytes));
+        }
+      } else {
+        if (kDebugMode) print('TTS Error: ${response.body}');
+      }
+    } catch (e) {
+      if (kDebugMode) print('TTS Network Error: $e');
+    }
   }
 
   Future<void> _loadWords() async {
@@ -63,7 +85,6 @@ class _LearningScreenState extends State<LearningScreen> {
       if (mounted) {
         setState(() {
           _words = words;
-          // 단어를 알파벳순으로 정렬
           _words.sort((a, b) => a.word.compareTo(b.word));
           _isLoading = false;
         });
@@ -86,7 +107,7 @@ class _LearningScreenState extends State<LearningScreen> {
     }
   }
 
-  // Gemini API 호출 (Firebase Functions 경유)
+  // Gemini API 호출
   void _showGeminiExample() async {
     if (_words.isEmpty || _isLoading) return;
     final currentWord = _words[_currentIndex];
@@ -100,18 +121,11 @@ class _LearningScreenState extends State<LearningScreen> {
       const int maxRetries = 3;
       const Duration initialDelay = Duration(seconds: 2);
 
-      // 💡 API URL 설정 (환경에 따라 자동 변경)
-      // 배포 후에는 아래 주소를 실제 Firebase Functions URL로 변경해야 합니다.
       String getApiUrl() {
-        // 1. 로컬 에뮬레이터 테스트 시 (Android)
         if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
-          return 'http://10.0.2.2:5001/voca-33a1c/us-central1/generateExample';
+          return 'http://10.0.2.2:5001/voca-33a1c/us-central1/api/generate-example';
         }
-
-        // 2. 로컬 에뮬레이터 테스트 시 (iOS/Web) 또는 실제 배포 URL
-        // 실제 배포 시에는 'http://localhost...' 대신 Firebase URL을 넣으세요.
-        // 예: return 'https://us-central1-voca-33a1c.cloudfunctions.net/generateExample';
-        return 'http://localhost:5001/voca-33a1c/us-central1/generateExample';
+        return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generate-example';
       }
 
       final String finalUrl = getApiUrl();
@@ -119,85 +133,63 @@ class _LearningScreenState extends State<LearningScreen> {
       while (retryCount < maxRetries) {
         final response = await http.post(
           Uri.parse(finalUrl),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-          },
-          body: jsonEncode(<String, String>{
+          headers: {'Content-Type': 'application/json; charset=UTF-8'},
+          body: jsonEncode({
             'word': currentWord.word,
             'meaning': currentWord.meaning,
-            'level': currentWord.level,
-            'theme': widget.theme.name,
           }),
         );
 
         if (response.statusCode == 200) {
-          // 💡 한글 깨짐 방지를 위해 utf8.decode 사용
           final Map<String, dynamic> data = jsonDecode(
             utf8.decode(response.bodyBytes),
           );
-
-          // Firebase Functions 응답 구조 확인 (result 객체 안에 있는지 확인)
-          final resultData = data['result'] ?? data;
-          final example = resultData['example'];
-          final korean = resultData['korean'];
-
-          final displayText = (example != null && korean != null)
-              ? "예문: $example\n\n해석: $korean"
-              : "예문을 생성할 수 없습니다.";
+          final generatedText = data['generatedText'];
 
           if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            _showGeminiResultDialog(displayText);
+            setState(() => _isLoading = false);
+            if (generatedText != null) {
+              _showGeminiResultDialog(generatedText);
+            } else {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('예문 생성 실패: 내용 없음')));
+            }
           }
-          return; // 성공 시 루프 종료
+          return;
         } else if (response.statusCode == 503) {
-          // 503 과부하 에러 시 재시도
           retryCount++;
-          print('Gemini API 호출 실패 (503 과부하): 재시도 ${retryCount}/${maxRetries}');
           if (retryCount < maxRetries) {
             await Future.delayed(initialDelay * retryCount);
           } else {
             if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
+              setState(() => _isLoading = false);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Gemini 서비스가 혼잡합니다. 잠시 후 다시 시도해주세요.'),
+                  content: Text('Gemini 서비스 과부하. 잠시 후 다시 시도해주세요.'),
                 ),
               );
             }
             return;
           }
         } else {
-          // 기타 서버 에러
-          final Map<String, dynamic> errorData = jsonDecode(
-            utf8.decode(response.bodyBytes),
-          );
-          final errorMessage = errorData['error'] ?? 'Unknown error';
           if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            print('Gemini API 호출 실패: ${response.statusCode} - $errorMessage');
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('서버 오류 발생: $errorMessage')));
+            setState(() => _isLoading = false);
+            print('API Error: ${response.statusCode}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('API 오류: ${response.statusCode}')),
+            );
           }
           return;
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        print('Gemini API 호출 실패 (Network): $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('서버 연결에 실패했습니다. 인터넷 연결을 확인해주세요.')),
-        );
+        setState(() => _isLoading = false);
+        print('API Exception: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('API 연결 실패: $e')));
       }
     }
   }
@@ -205,16 +197,18 @@ class _LearningScreenState extends State<LearningScreen> {
   void _showGeminiResultDialog(String text) {
     showDialog(
       context: context,
+      barrierDismissible: false, // 바깥 클릭으로 닫기 방지 (실수 방지)
       builder: (BuildContext context) {
         return AlertDialog(
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Gemini 심화 학습 예문', style: TextStyle(fontSize: 18)),
+              const Text('Gemini 심화 예문', style: TextStyle(fontSize: 18)),
               IconButton(
-                icon: const Icon(Icons.volume_up),
-                // 예문 중 영어 부분만 읽어주기 (간단한 파싱 또는 전체 읽기)
-                onPressed: () => _speak(text),
+                icon: const Icon(Icons.volume_up, color: Colors.teal),
+                // 💡 예문 읽기 (속도 1.0)
+                // 한글이 포함되어 있으므로 서버에서 자동으로 한국어 TTS로 읽어줍니다.
+                onPressed: () => _speak(text, speed: 1.0),
               ),
             ],
           ),
@@ -222,8 +216,10 @@ class _LearningScreenState extends State<LearningScreen> {
           actions: <Widget>[
             TextButton(
               child: const Text('닫기'),
-              onPressed: () {
-                Navigator.of(context).pop();
+              onPressed: () async {
+                // 💡 닫기 버튼을 누르면 오디오를 즉시 정지합니다.
+                await _audioPlayer.stop();
+                if (context.mounted) Navigator.of(context).pop();
               },
             ),
           ],
@@ -270,7 +266,7 @@ class _LearningScreenState extends State<LearningScreen> {
           Center(
             child: _words.isEmpty
                 ? const Text(
-                    '이 테마에 등록된 단어가 없습니다.',
+                    '등록된 단어가 없습니다.',
                     style: TextStyle(fontSize: 18, color: Colors.red),
                   )
                 : Column(
@@ -315,12 +311,14 @@ class _LearningScreenState extends State<LearningScreen> {
                                   key: const ValueKey(true),
                                   text: currentWord!.meaning,
                                   isFront: false,
+                                  // 💡 한글 뜻 읽기 (서버가 한국어로 자동 처리)
                                   onSpeak: () => _speak(currentWord.meaning),
                                 )
                               : FlashCard(
                                   key: const ValueKey(false),
                                   text: currentWord!.word,
                                   isFront: true,
+                                  // 💡 영어 단어 읽기 (서버가 영어로 자동 처리)
                                   onSpeak: () => _speak(currentWord.word),
                                 ),
                         ),
