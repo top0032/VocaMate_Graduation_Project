@@ -1,20 +1,62 @@
 import 'package:flutter/material.dart';
-import 'theme_selection_screen.dart'; // 💡 이동할 테마 선택 화면 import
-import 'memo_list_page.dart'; // 💡 이동할 메모 목록 화면 import
-import '../theme.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 💡 Firebase Auth 임포트
-import 'auth/auth_check_screen.dart'; // 💡 AuthCheckScreen 임포트
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class MainScreen extends StatelessWidget {
+import 'theme_selection_screen.dart'; // 이동할 테마 선택 화면
+import 'memo_list_page.dart'; // 이동할 메모 목록 화면
+import 'admin/admin_screen.dart'; // 💡 관리자 대시보드 화면 (추가됨)
+import '../theme.dart';
+import 'auth/auth_check_screen.dart'; // 로그아웃 후 이동할 화면
+
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
-  // 💡 로그아웃 로직
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminStatus();
+  }
+
+  // 💡 관리자 권한 확인 함수
+  Future<void> _checkAdminStatus() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data() as Map<String, dynamic>;
+          // Firestore의 'role' 필드가 'admin'인지 확인
+          if (data['role'] == 'admin') {
+            if (mounted) {
+              setState(() {
+                _isAdmin = true;
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('관리자 확인 중 오류 발생: $e');
+      }
+    }
+  }
+
+  // 로그아웃 로직
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // 로그아웃 후 AuthCheckScreen으로 이동하여 인증 상태를 다시 확인합니다.
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const AuthCheckScreen()),
-      (route) => false, // 이전 모든 라우트 제거
+      (route) => false,
     );
   }
 
@@ -30,10 +72,9 @@ class MainScreen extends StatelessWidget {
               // TODO: 설정 화면으로 이동
             },
           ),
-          // 💡 로그아웃 버튼 추가
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context), // 로그아웃 함수 호출
+            onPressed: () => _logout(context),
             tooltip: '로그아웃',
           ),
         ],
@@ -80,7 +121,23 @@ class MainScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  // TODO: Add more menu items here
+
+                  // 💡 관리자일 때만 보이는 '관리자 페이지' 메뉴 카드
+                  if (_isAdmin)
+                    MenuCard(
+                      title: '관리자 페이지',
+                      icon: Icons.admin_panel_settings,
+                      // 관리자 메뉴는 시각적으로 구분되도록 색상을 다르게 처리할 수 있음 (선택 사항)
+                      iconColor: Colors.redAccent,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminScreen(),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -95,12 +152,14 @@ class MenuCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final VoidCallback onTap;
+  final Color? iconColor; // 💡 아이콘 색상 커스터마이징 추가
 
   const MenuCard({
     super.key,
     required this.title,
     required this.icon,
     required this.onTap,
+    this.iconColor,
   });
 
   @override
@@ -114,7 +173,8 @@ class MenuCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: AppTheme.primaryColor),
+            // 전달받은 색상이 없으면 기본 테마 색상 사용
+            Icon(icon, size: 48, color: iconColor ?? AppTheme.primaryColor),
             const SizedBox(height: 16),
             Text(title, style: AppTheme.themeData.textTheme.headlineSmall),
           ],

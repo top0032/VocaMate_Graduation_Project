@@ -1,62 +1,70 @@
-// 1. 필요한 모듈만 require (초기화는 나중에)
 const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const cors = require('cors');
-require('dotenv').config(); // .env 파일을 읽기 위해 이 줄을 추가합니다.
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const textToSpeech = require('@google-cloud/text-to-speech');
+
+admin.initializeApp();
 
 const app = express();
-app.use(cors({ origin: true })); 
+app.use(cors({ origin: true }));
 app.use(express.json());
 
-// 4. API 라우트
+// 💡 전역 변수에서는 초기화하지 않음 (배포 실패 방지)
+// const ttsClient = new textToSpeech.TextToSpeechClient(); // <- 이걸 함수 안으로 이동하거나 lazy loading 할 수 있지만, 일단 둡니다.
+
+// 1. Gemini 예문 생성 API
 app.post('/generate-example', async (req, res) => {
-  
-  // 💡 모든 초기화 코드를 'try...catch' 블록 안으로 이동시켰습니다.
+  // 💡 요청이 들어왔을 때 API 키를 확인합니다. (배포 시 터지는 것 방지)
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || functions.config().gemini?.key;
+
+  if (!GEMINI_API_KEY) {
+    console.error('ERROR: GEMINI_API_KEY is missing.');
+    return res.status(500).json({ error: 'Server configuration error: API Key missing.' });
+  }
+
+  const { word, meaning } = req.body;
+  if (!word || !meaning) return res.status(400).json({ error: 'Missing data' });
+
   try {
-    // 1. API 키를 함수 내부에서 불러옵니다.
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-    // 2. API 키가 있는지 확인합니다.
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not set in .env file.');
-      // JSON 오류를 보냅니다.
-      return res.status(500).json({ error: 'Server configuration error: API Key is missing.' });
-    }
-
-    // 3. (가장 중요) genAI 인스턴스를 'try' 블록 안에서 생성합니다.
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY); 
-
-    // 4. 요청 본문(word, meaning)을 확인합니다.
-    const { word, meaning } = req.body;
-    if (!word || !meaning) {
-      return res.status(400).json({ error: 'Word and meaning are required.' });
-    }
-
-    // 5. Gemini API를 호출합니다.
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    const prompt = `Generate 3 example sentences using the English word "${word}" with its Korean meaning "${meaning}". Provide the output in Korean. Each example sentence be on a new line, followed by its Korean translation on the next line. For example:
-English sentence 1.
-한국어 번역 1.
-English sentence 2.
-한국어 번역 2.
-English sentence 3.
-한국어 번역 3.`;
-
+    // 💡 키가 있을 때 인스턴스 생성
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    
+    const prompt = `Generate 3 example sentences using "${word}" (${meaning}). Output in Korean. Format: English\nKorean...`;
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-
-    // 6. 성공 시 JSON 응답을 보냅니다.
-    res.json({ generatedText: text });
-
+    res.json({ generatedText: response.text() });
   } catch (error) {
-    // 7. (중요) 이제 API 키 오류, Gemini 호출 오류 등 '모든' 오류가 여기서 잡힙니다.
-    console.error('Gemini API call or init failed:', error);
-    // JSON 오류를 보냅니다.
-    res.status(500).json({ error: 'Failed to process request on server.', details: error.message });
+    console.error('Gemini Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// 5. Express 앱을 'api'라는 이름으로 export 합니다.
+// 2. 고품질 TTS 생성 API
+app.post('/generate-speech', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'Missing text' });
+
+  // TTS 클라이언트 생성 (호출 시점에 생성하거나 전역에 둬도 됨)
+  const ttsClient = new textToSpeech.TextToSpeechClient();
+
+  const request = {
+    input: { text: text },
+    voice: { languageCode: 'en-US', name: 'en-US-Neural2-D' },
+    audioConfig: { audioEncoding: 'MP3' },
+  };
+
+  try {
+    const [response] = await ttsClient.synthesizeSpeech(request);
+    res.json({ audioContent: response.audioContent.toString('base64') });
+  } catch (error) {
+    console.error('TTS Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// HTTPS 요청 처리
 exports.api = functions.https.onRequest(app);
