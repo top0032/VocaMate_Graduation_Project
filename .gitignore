@@ -44,6 +44,12 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment variables
+# Environment variables (Flutter)
 .env
 
+# 💡 [추가됨] Firebase Functions (Node.js) 보안 설정
+functions/.env
+functions/node_modules/
+functions/firebase-debug.log
+functions/firestore-debug.log
+functions/ui-debug.log

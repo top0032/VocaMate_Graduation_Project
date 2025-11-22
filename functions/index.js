@@ -12,7 +12,7 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 // API 키 직접 입력 (사용자님의 키 유지)
-const GEMINI_API_KEY = "AIzaSyC21YLnGVDtUiJ6ymMocPpX_yAifjlija4";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // TTS 클라이언트 초기화
 const ttsClient = new textToSpeech.TextToSpeechClient();
