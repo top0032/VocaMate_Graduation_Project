@@ -55,11 +55,11 @@ class _ManageThemesScreenState extends State<ManageThemesScreen> {
           children: [
             TextField(
               controller: _idController,
-              decoration: const InputDecoration(labelText: '테마 ID (예: T006)'),
+              decoration: const InputDecoration(labelText: '테마 ID (예: daily)'),
             ),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: '테마 이름 (예: 여행)'),
+              decoration: const InputDecoration(labelText: '테마 이름 (예: 일상)'),
             ),
           ],
         ),

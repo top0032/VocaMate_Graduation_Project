@@ -65,21 +65,21 @@ class _ManageWordsScreenState extends State<ManageWordsScreen> {
             children: [
               TextField(
                 controller: _wordController,
-                decoration: const InputDecoration(
-                  labelText: '영단어 (예: Algorithm)',
-                ),
+                decoration: const InputDecoration(labelText: '영단어 (예: honest)'),
               ),
               TextField(
                 controller: _meaningController,
-                decoration: const InputDecoration(labelText: '뜻 (예: 알고리즘)'),
+                decoration: const InputDecoration(labelText: '뜻 (예:정직한)'),
               ),
               TextField(
                 controller: _themeIdController,
-                decoration: const InputDecoration(labelText: '테마 ID (예: T005)'),
+                decoration: const InputDecoration(
+                  labelText: '테마 ID (예: daily)',
+                ),
               ),
               TextField(
                 controller: _levelController,
-                decoration: const InputDecoration(labelText: '난이도 (예: 고급)'),
+                decoration: const InputDecoration(labelText: '난이도 (예: 초급)'),
               ),
             ],
           ),
