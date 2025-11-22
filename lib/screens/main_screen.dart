@@ -5,7 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme_selection_screen.dart'; // 이동할 테마 선택 화면
 import 'memo_list_page.dart'; // 이동할 메모 목록 화면
 import 'quiz_theme_selection_screen.dart'; // 💡 퀴즈 테마 선택 화면
-import 'admin/admin_screen.dart'; // 💡 관리자 대시보드 화면 (추가됨)
+import 'admin/admin_screen.dart'; // 💡 관리자 대시보드 화면
+import 'favorites_screen.dart'; // 💡 [추가] 나만의 단어장 화면 import
 import '../theme.dart';
 import 'auth/auth_check_screen.dart'; // 로그아웃 후 이동할 화면
 
@@ -112,6 +113,22 @@ class _MainScreenState extends State<MainScreen> {
                       );
                     },
                   ),
+
+                  // 💡 [추가됨] '나만의 단어장' 메뉴 카드
+                  MenuCard(
+                    title: '나만의 단어장',
+                    icon: Icons.star,
+                    iconColor: Colors.amber, // 별 색상 강조
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FavoritesScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
                   MenuCard(
                     title: '메모장',
                     icon: Icons.note,
@@ -122,14 +139,18 @@ class _MainScreenState extends State<MainScreen> {
                       );
                     },
                   ),
-                  // 💡 퀴즈 메뉴 카드 추가
+
+                  // 💡 퀴즈 메뉴
                   MenuCard(
                     title: '퀴즈',
                     icon: Icons.quiz,
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const QuizThemeSelectionScreen()),
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const QuizThemeSelectionScreen(),
+                        ),
                       );
                     },
                   ),
@@ -139,7 +160,6 @@ class _MainScreenState extends State<MainScreen> {
                     MenuCard(
                       title: '관리자 페이지',
                       icon: Icons.admin_panel_settings,
-                      // 관리자 메뉴는 시각적으로 구분되도록 색상을 다르게 처리할 수 있음 (선택 사항)
                       iconColor: Colors.redAccent,
                       onTap: () {
                         Navigator.push(
@@ -185,7 +205,6 @@ class MenuCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 전달받은 색상이 없으면 기본 테마 색상 사용
             Icon(icon, size: 48, color: iconColor ?? AppTheme.primaryColor),
             const SizedBox(height: 16),
             Text(title, style: AppTheme.themeData.textTheme.headlineSmall),
