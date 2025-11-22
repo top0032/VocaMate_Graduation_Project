@@ -125,7 +125,15 @@ class _LearningScreenState extends State<LearningScreen> {
         if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
           return 'http://10.0.2.2:5001/voca-33a1c/us-central1/api/generate-example';
         }
+<<<<<<< HEAD
         return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generate-example';
+=======
+
+        // 2. 로컬 에뮬레이터 테스트 시 (iOS/Web) 또는 실제 배포 URL
+        // 실제 배포 시에는 'http://localhost...' 대신 Firebase URL을 넣으세요.
+        // 예: return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generateExample'; // 💡 /api/ 추가
+        return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generateExample';
+>>>>>>> 74ca4420ad729f9352ecd89ba8320ca4b64ea65c
       }
 
       final String finalUrl = getApiUrl();
@@ -309,10 +317,13 @@ class _LearningScreenState extends State<LearningScreen> {
                           child: _isFlipped
                               ? FlashCard(
                                   key: const ValueKey(true),
-                                  text: currentWord!.meaning,
+                                  word: currentWord!,
                                   isFront: false,
+<<<<<<< HEAD
                                   // 💡 한글 뜻 읽기 (서버가 한국어로 자동 처리)
                                   onSpeak: () => _speak(currentWord.meaning),
+=======
+>>>>>>> 74ca4420ad729f9352ecd89ba8320ca4b64ea65c
                                 )
                               : FlashCard(
                                   key: const ValueKey(false),
@@ -363,16 +374,18 @@ class _LearningScreenState extends State<LearningScreen> {
 }
 
 class FlashCard extends StatelessWidget {
-  final String text;
+  final String? text;
+  final WordModel? word;
   final bool isFront;
-  final VoidCallback onSpeak;
+  final VoidCallback? onSpeak;
 
   const FlashCard({
     super.key,
-    required this.text,
+    this.text,
+    this.word,
     required this.isFront,
-    required this.onSpeak,
-  });
+    this.onSpeak,
+  }) : assert(isFront ? text != null && onSpeak != null : word != null);
 
   @override
   Widget build(BuildContext context) {
@@ -383,28 +396,57 @@ class FlashCard extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.8,
         height: 300,
         alignment: Alignment.center,
-        child: Stack(
-          children: [
-            Center(
-              child: Text(
-                text,
-                textAlign: TextAlign.center,
-                style: isFront
-                    ? AppTheme.themeData.textTheme.displayMedium
-                    : AppTheme.themeData.textTheme.displaySmall,
+        padding: const EdgeInsets.all(16.0),
+        child: isFront
+            ? Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      text!,
+                      textAlign: TextAlign.center,
+                      style: AppTheme.themeData.textTheme.displayMedium,
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IconButton(
+                      icon: const Icon(Icons.volume_up, size: 30),
+                      onPressed: onSpeak,
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    word!.meaning,
+                    textAlign: TextAlign.center,
+                    style: AppTheme.themeData.textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  if (word!.partOfSpeech.isNotEmpty)
+                    Text(
+                      '[${word!.partOfSpeech}]',
+                      style: AppTheme.themeData.textTheme.titleLarge?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  if (word!.phoneticUS.isNotEmpty)
+                    Text(
+                      '미국: ${word!.phoneticUS}',
+                      style: AppTheme.themeData.textTheme.titleMedium,
+                    ),
+                  if (word!.phoneticUK.isNotEmpty)
+                    Text(
+                      '영국: ${word!.phoneticUK}',
+                      style: AppTheme.themeData.textTheme.titleMedium,
+                    ),
+                ],
               ),
-            ),
-            if (isFront)
-              Positioned(
-                top: 10,
-                right: 10,
-                child: IconButton(
-                  icon: const Icon(Icons.volume_up, size: 30),
-                  onPressed: onSpeak,
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
