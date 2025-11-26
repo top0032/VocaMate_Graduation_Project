@@ -6,7 +6,8 @@ import '../models/theme_model.dart';
 import '../models/word_model.dart';
 import '../services/theme_service.dart';
 import 'quiz_page.dart';
-import 'quiz_stats_screen.dart'; // 1. 통계 화면 import
+import 'quiz_stats_screen.dart';
+import 'word_stats_screen.dart'; // 1. 단어 통계 화면 import
 import '../theme.dart';
 
 class QuizThemeSelectionScreen extends StatefulWidget {
@@ -137,13 +138,13 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
           }
 
           final themes = snapshot.data!;
-          const int extraItems = 2; // 2. '통계'와 '나만의 단어장' 카드
+          const int extraItems = 3; // 5. '퀴즈 통계', '단어 통계', '나만의 단어장'
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: themes.length + extraItems,
             itemBuilder: (context, index) {
-              // 3. '퀴즈 통계' 카드
+              // '퀴즈 통계' 카드
               if (index == 0) {
                 return Card(
                   elevation: 2,
@@ -168,8 +169,33 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
                 );
               }
 
-              // '나만의 단어장' 카드
-              if (index == 1) { // 3. 인덱스 1로 변경
+              // 2. '단어 통계' 카드
+              if (index == 1) {
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.pie_chart, color: Colors.blueGrey),
+                    title: Text(
+                      '단어 통계',
+                      style: AppTheme.themeData.textTheme.headlineSmall,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const WordStatsScreen()),
+                      );
+                    },
+                  ),
+                );
+              }
+              
+              // 3. '나만의 단어장' 카드
+              if (index == 2) {
                 return Card(
                   elevation: 2,
                   margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -191,7 +217,7 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
                 );
               }
 
-              // 4. 나머지 테마들 (인덱스 조정)
+              // 4. 나머지 테마들
               final theme = themes[index - extraItems];
               return Card(
                 elevation: 2,
