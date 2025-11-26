@@ -142,7 +142,7 @@ class _MainScreenState extends State<MainScreen> {
 
                   // 💡 퀴즈 메뉴
                   MenuCard(
-                    title: '퀴즈',
+                    title: '퀴즈 풀기',
                     icon: Icons.quiz,
                     onTap: () {
                       Navigator.push(
