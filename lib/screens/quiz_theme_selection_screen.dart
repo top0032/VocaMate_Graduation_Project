@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/theme_model.dart';
+import '../models/word_model.dart';
 import '../services/theme_service.dart';
 import 'quiz_page.dart';
+import 'quiz_stats_screen.dart';
+import 'word_stats_screen.dart'; // 1. 단어 통계 화면 import
 import '../theme.dart';
 
 class QuizThemeSelectionScreen extends StatefulWidget {
@@ -27,9 +33,8 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
     });
   }
 
-  void _onThemeSelected(ThemeModel selectedTheme) async {
-    // 💡 문제 개수 선택 다이얼로그 표시
-    final int? selectedCount = await showDialog<int>(
+  Future<int?> _showQuestionCountDialog() {
+    return showDialog<int>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -54,8 +59,52 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
         );
       },
     );
+  }
 
-    if (selectedCount == null) return; // 사용자가 다이얼로그를 그냥 닫은 경우
+  void _onMyVocabularySelected() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('퀴즈를 만들려면 로그인이 필요합니다.')),
+      );
+      return;
+    }
+
+    final int? selectedCount = await _showQuestionCountDialog();
+    if (selectedCount == null) return;
+
+    final favoritesSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .get();
+
+    if (favoritesSnapshot.docs.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('퀴즈를 만들려면 최소 4개 이상의 단어를 즐겨찾기해야 합니다.')),
+      );
+      return;
+    }
+
+    final favoriteWords = favoritesSnapshot.docs
+        .map((doc) => WordModel.fromMap(doc.data(), doc.id))
+        .toList();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizPage(
+          words: favoriteWords,
+          numberOfQuestions: selectedCount,
+          quizTitle: '나만의 단어장 퀴즈',
+        ),
+      ),
+    );
+  }
+
+  void _onThemeSelected(ThemeModel selectedTheme) async {
+    final int? selectedCount = await _showQuestionCountDialog();
+    if (selectedCount == null) return;
 
     Navigator.push(
       context,
@@ -63,6 +112,7 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
         builder: (context) => QuizPage(
           theme: selectedTheme,
           numberOfQuestions: selectedCount,
+          quizTitle: '${selectedTheme.name} 퀴즈',
         ),
       ),
     );
@@ -72,7 +122,7 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('퀴즈 테마 선택'),
+        title: const Text('퀴즈 풀기'),
       ),
       body: FutureBuilder<List<ThemeModel>>(
         future: _themesFuture,
@@ -88,12 +138,87 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
           }
 
           final themes = snapshot.data!;
+          const int extraItems = 3; // 5. '퀴즈 통계', '단어 통계', '나만의 단어장'
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: themes.length,
+            itemCount: themes.length + extraItems,
             itemBuilder: (context, index) {
-              final theme = themes[index];
+              // '퀴즈 통계' 카드
+              if (index == 0) {
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.bar_chart, color: Colors.blueGrey),
+                    title: Text(
+                      '퀴즈 통계 보기',
+                      style: AppTheme.themeData.textTheme.headlineSmall,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const QuizStatsScreen()),
+                      );
+                    },
+                  ),
+                );
+              }
+
+              // 2. '단어 통계' 카드
+              if (index == 1) {
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.pie_chart, color: Colors.blueGrey),
+                    title: Text(
+                      '단어 통계',
+                      style: AppTheme.themeData.textTheme.headlineSmall,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const WordStatsScreen()),
+                      );
+                    },
+                  ),
+                );
+              }
+              
+              // 3. '나만의 단어장' 카드
+              if (index == 2) {
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: const Icon(Icons.star, color: Colors.amber),
+                    title: Text(
+                      '나만의 단어장',
+                      style: AppTheme.themeData.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.amber),
+                    onTap: _onMyVocabularySelected,
+                  ),
+                );
+              }
+
+              // 4. 나머지 테마들
+              final theme = themes[index - extraItems];
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -116,3 +241,4 @@ class _QuizThemeSelectionScreenState extends State<QuizThemeSelectionScreen> {
     );
   }
 }
+
