@@ -23,11 +23,15 @@ android {
     }
 
     defaultConfig {
+        // 💡 [수정 1] 주석 오류 해결 (앞에 // 추가)
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        
         applicationId = "com.example.flutter_application_1"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        
+        // 💡 [수정 2] TTS/Audio 패키지 사용을 위해 minSdk를 21로 변경 (필수)
         minSdk = flutter.minSdkVersion
+        // 기존: minSdk = flutter.minSdkVersion
+        
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
