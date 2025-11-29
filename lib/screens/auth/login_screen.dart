@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 💡 Firebase Auth를 이용한 이메일/비밀번호 로그인 시도
+      // Firebase Auth를 이용한 이메일/비밀번호 로그인 시도
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -57,6 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
           'VocaMate 로그인',
           style: TextStyle(color: Colors.white),
         ),
+        // 💡 앱바 배경색은 테마의 primaryColor를 따릅니다.
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -66,12 +68,13 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   'VocaMate',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey,
+                    // 💡 [수정] 앱바 색상과 통일 (테마의 기본 색상 사용)
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -99,20 +102,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _tryLogin,
+                    style: ElevatedButton.styleFrom(
+                      // 💡 [수정] 버튼 배경색을 앱바 색상과 통일
+                      backgroundColor: Theme.of(context).primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             '로그인',
-                            style: TextStyle(fontSize: 18, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white, // 글자색 흰색 유지
+                            ),
                           ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueGrey,
-                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // 💡 회원가입 화면으로 이동
+                // 회원가입 화면으로 이동
                 TextButton(
                   onPressed: _isLoading
                       ? null

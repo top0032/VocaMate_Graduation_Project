@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:audioplayers/audioplayers.dart'; // 💡 오디오 재생 패키지
+import 'package:audioplayers/audioplayers.dart';
 
 import '../models/theme_model.dart';
 import '../models/word_model.dart';
@@ -22,7 +22,7 @@ class LearningScreen extends StatefulWidget {
 
 class _LearningScreenState extends State<LearningScreen> {
   final ThemeService _themeService = ThemeService();
-  final AudioPlayer _audioPlayer = AudioPlayer(); // TTS용 플레이어
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<WordModel> _words = [];
   bool _isLoading = true;
@@ -42,18 +42,16 @@ class _LearningScreenState extends State<LearningScreen> {
     super.dispose();
   }
 
-  // 💡 API TTS 호출 함수 (서버로 텍스트 전송 -> 오디오 수신 -> 재생)
+  // Cloud TTS 호출 및 재생
   Future<void> _speak(String text, {double speed = 1.0}) async {
     if (text.isEmpty) return;
-
-    await _audioPlayer.stop(); // 기존 재생 중지
+    await _audioPlayer.stop();
 
     try {
       String getTtsApiUrl() {
         if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
           return 'http://10.0.2.2:5001/voca-33a1c/us-central1/api/generate-speech';
         }
-        // 💡 배포된 실제 주소 (확인 필요)
         return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generate-speech';
       }
 
@@ -98,6 +96,7 @@ class _LearningScreenState extends State<LearningScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+      print('단어 로드 실패: $e');
     }
   }
 
@@ -123,7 +122,12 @@ class _LearningScreenState extends State<LearningScreen> {
 
   Future<void> _toggleFavorite() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
+      return;
+    }
     final currentWord = _words[_currentIndex];
     final docRef = FirebaseFirestore.instance
         .collection('users')
@@ -138,13 +142,17 @@ class _LearningScreenState extends State<LearningScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('삭제됨')));
     } else {
+      // 기본 저장 시에도 모든 정보 저장
       await docRef.set({
         'word': currentWord.word,
         'meaning': currentWord.meaning,
         'level': currentWord.level,
         'theme': widget.theme.name,
+        'partOfSpeech': currentWord.partOfSpeech ?? '',
+        'phoneticUS': currentWord.phoneticUS ?? '',
+        'phoneticUK': currentWord.phoneticUK ?? '',
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
       if (mounted)
         ScaffoldMessenger.of(
           context,
@@ -153,35 +161,59 @@ class _LearningScreenState extends State<LearningScreen> {
     setState(() => _isFavorite = !_isFavorite);
   }
 
+  // 💡 [핵심 수정] Gemini 예문 저장 함수
   Future<void> _saveGeminiResult(String resultText) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final currentWord = _words[_currentIndex];
 
     try {
-      await FirebaseFirestore.instance
+      final docRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('favorites')
-          .doc(currentWord.word)
-          .set({
-            'word': currentWord.word,
-            'meaning': currentWord.meaning,
-            'level': currentWord.level,
-            'theme': widget.theme.name,
-            'ai_result': resultText,
-            'savedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+          .doc(currentWord.word);
+
+      // 1. 문서가 이미 존재하는지 확인
+      final docSnapshot = await docRef.get();
+
+      // 2. 저장할 데이터 준비 (기본 단어 정보)
+      final Map<String, dynamic> data = {
+        'word': currentWord.word,
+        'meaning': currentWord.meaning,
+        'level': currentWord.level,
+        'theme': widget.theme.name,
+        'partOfSpeech': currentWord.partOfSpeech ?? '',
+        'phoneticUS': currentWord.phoneticUS ?? '',
+        'phoneticUK': currentWord.phoneticUK ?? '',
+
+        // 예문 배열에 추가 (arrayUnion 사용)
+        'ai_examples': FieldValue.arrayUnion([
+          {'content': resultText, 'savedAt': Timestamp.now()},
+        ]),
+        'lastUpdatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // 💡 3. 만약 문서가 처음 생성되는 것이라면 createdAt을 추가
+      if (!docSnapshot.exists) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+      }
+
+      // 4. 데이터 저장 (merge: true로 기존 데이터 유지)
+      await docRef.set(data, SetOptions(merge: true));
 
       if (mounted) {
-        setState(() => _isFavorite = true);
-        Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('예문 저장됨')));
+        setState(() => _isFavorite = true); // 별표 채우기
+        Navigator.pop(context); // 다이얼로그 닫기
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('예문이 단어장(즐겨찾기)에 저장되었습니다.')),
+        );
       }
     } catch (e) {
       print('Save Error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('저장 중 오류가 발생했습니다.')));
     }
   }
 
@@ -203,9 +235,11 @@ class _LearningScreenState extends State<LearningScreen> {
         return 'https://us-central1-voca-33a1c.cloudfunctions.net/api/generate-example';
       }
 
+      final String finalUrl = getApiUrl();
+
       while (retryCount < maxRetries) {
         final response = await http.post(
-          Uri.parse(getApiUrl()),
+          Uri.parse(finalUrl),
           headers: {'Content-Type': 'application/json; charset=UTF-8'},
           body: jsonEncode({
             'word': currentWord.word,
@@ -273,7 +307,7 @@ class _LearningScreenState extends State<LearningScreen> {
           actions: <Widget>[
             TextButton.icon(
               icon: const Icon(Icons.save_alt),
-              label: const Text('저장'),
+              label: const Text('저장 (나만의 단어장)'),
               onPressed: () => _saveGeminiResult(text),
             ),
             TextButton(
@@ -341,7 +375,10 @@ class _LearningScreenState extends State<LearningScreen> {
         children: [
           Center(
             child: _words.isEmpty
-                ? const Text('단어가 없습니다.')
+                ? const Text(
+                    '등록된 단어가 없습니다.',
+                    style: TextStyle(fontSize: 18, color: Colors.red),
+                  )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -382,17 +419,15 @@ class _LearningScreenState extends State<LearningScreen> {
                           child: _isFlipped
                               ? FlashCard(
                                   key: const ValueKey(true),
-                                  word: currentWord!,
+                                  text: currentWord!.meaning,
                                   isFront: false,
-                                  onSpeak: () =>
-                                      _speak(currentWord.meaning, speed: 1.0),
+                                  onSpeak: () => _speak(currentWord.meaning),
                                 )
                               : FlashCard(
                                   key: const ValueKey(false),
-                                  word: currentWord!,
+                                  text: currentWord!.word,
                                   isFront: true,
-                                  onSpeak: () =>
-                                      _speak(currentWord.word, speed: 1.0),
+                                  onSpeak: () => _speak(currentWord.word),
                                 ),
                         ),
                       ),
@@ -435,20 +470,20 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 }
 
-// 💡 FlashCard (수정 없음)
 class FlashCard extends StatelessWidget {
-  final WordModel? word;
+  final String text;
   final bool isFront;
-  final VoidCallback? onSpeak;
+  final VoidCallback onSpeak;
 
-  const FlashCard({super.key, this.word, required this.isFront, this.onSpeak});
+  const FlashCard({
+    super.key,
+    required this.text,
+    required this.isFront,
+    required this.onSpeak,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final displayText = word != null
-        ? (isFront ? word!.word : word!.meaning)
-        : '';
-
     return Card(
       elevation: 10,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -456,38 +491,28 @@ class FlashCard extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.8,
         height: 300,
         alignment: Alignment.center,
-        padding: const EdgeInsets.all(16.0),
-        child: isFront
-            ? Stack(
-                children: [
-                  Center(
-                    child: Text(
-                      displayText,
-                      textAlign: TextAlign.center,
-                      style: AppTheme.themeData.textTheme.displayMedium,
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.volume_up, size: 30),
-                      onPressed: onSpeak,
-                    ),
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    displayText,
-                    textAlign: TextAlign.center,
-                    style: AppTheme.themeData.textTheme.displaySmall,
-                  ),
-                  // (뒷면 추가 정보 로직 유지)
-                ],
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: isFront
+                    ? AppTheme.themeData.textTheme.displayMedium
+                    : AppTheme.themeData.textTheme.displaySmall,
               ),
+            ),
+            if (isFront)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.volume_up, size: 30),
+                  onPressed: onSpeak,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

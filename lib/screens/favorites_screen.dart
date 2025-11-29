@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme.dart'; // 테마 적용
+import '../theme.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
-  // 즐겨찾기 삭제 함수
   void _deleteFavorite(String docId, BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -20,14 +19,13 @@ class FavoritesScreen extends StatelessWidget {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('즐겨찾기에서 삭제되었습니다.')));
+    ).showSnackBar(const SnackBar(content: Text('삭제되었습니다.')));
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    // 로그인이 안 된 경우 처리
     if (user == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('나만의 단어장')),
@@ -38,7 +36,6 @@ class FavoritesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('나만의 단어장 (즐겨찾기)')),
       body: StreamBuilder<QuerySnapshot>(
-        // users -> uid -> favorites 컬렉션을 생성일(createdAt) 역순(최신순)으로 정렬하여 가져옴
         stream: FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -74,8 +71,10 @@ class FavoritesScreen extends StatelessWidget {
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id; // 삭제할 때 사용
-              final aiResult = data['ai_result'] as String?; // 저장된 Gemini 예문
+              final docId = docs[index].id;
+
+              // 💡 1. 배열 형태로 저장된 예문 가져오기
+              final aiExamples = data['ai_examples'] as List<dynamic>?;
 
               return Card(
                 elevation: 3,
@@ -84,7 +83,6 @@ class FavoritesScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ExpansionTile(
-                  // 단어와 뜻 표시
                   title: Text(
                     data['word'] ?? 'Unknown',
                     style: const TextStyle(
@@ -101,40 +99,64 @@ class FavoritesScreen extends StatelessWidget {
                     icon: const Icon(Icons.delete, color: Colors.redAccent),
                     onPressed: () => _deleteFavorite(docId, context),
                   ),
-                  // 펼치면 저장된 AI 예문 표시
                   children: [
-                    if (aiResult != null && aiResult.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                '🤖 Gemini 심화 예문',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal,
+                    // 💡 2. 저장된 모든 예문을 반복해서 표시
+                    if (aiExamples != null && aiExamples.isNotEmpty)
+                      ...aiExamples.map((ex) {
+                        final content = ex['content'] ?? '';
+                        // 날짜 포맷팅 (간단하게)
+                        final date =
+                            (ex['savedAt'] as Timestamp?)
+                                ?.toDate()
+                                .toString()
+                                .split(' ')[0] ??
+                            '';
+
+                        return Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      '🤖 Gemini 예문',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal,
+                                      ),
+                                    ),
+                                    Text(
+                                      date,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                aiResult,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.5,
+                                const SizedBox(height: 8),
+                                Text(
+                                  content,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.5,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      )
+                        );
+                      }).toList()
                     else
                       const Padding(
                         padding: EdgeInsets.all(16.0),

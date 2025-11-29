@@ -1,5 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 💡 1. Firebase Auth 추가
+import 'package:cloud_firestore/cloud_firestore.dart'; // 💡 2. Firestore 추가
+
 import '../models/theme_model.dart';
 import '../services/theme_service.dart';
 import 'learning_screen.dart';
@@ -16,10 +19,41 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
   final ThemeService _themeService = ThemeService();
   Future<List<ThemeModel>>? _themesFuture;
 
+  // 💡 3. 관리자 여부 상태 변수 추가
+  bool _isAdmin = false;
+
   @override
   void initState() {
     super.initState();
     _loadThemes();
+    _checkAdminStatus(); // 💡 4. 초기화 시 관리자 권한 확인
+  }
+
+  // 💡 5. 관리자 권한 확인 함수 구현
+  Future<void> _checkAdminStatus() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data() as Map<String, dynamic>;
+          // Firestore의 'role' 필드가 'admin'인지 확인
+          if (data['role'] == 'admin') {
+            if (mounted) {
+              setState(() {
+                _isAdmin = true;
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('관리자 확인 중 오류 발생: $e');
+      }
+    }
   }
 
   void _loadThemes() {
@@ -42,13 +76,13 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv', 'json'],
-      withData: true, // 💡 웹에서 파일 내용을 읽기 위해 true로 설정
+      withData: true, // 웹에서 파일 내용을 읽기 위해 true로 설정
     );
 
     if (result == null || result.files.single.bytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('파일을 선택하지 않았거나 읽을 수 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('파일을 선택하지 않았거나 읽을 수 없습니다.')));
       return;
     }
 
@@ -65,9 +99,9 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
 
     final themes = await _themesFuture;
     if (!mounted || themes == null || themes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('단어를 추가할 테마가 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('단어를 추가할 테마가 없습니다.')));
       return;
     }
 
@@ -104,20 +138,28 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
     try {
       int importedCount = 0;
       if (fileExtension == 'csv') {
-        importedCount = await _themeService.importWordsFromCsv(fileBytes, selectedTheme.themeId);
+        importedCount = await _themeService.importWordsFromCsv(
+          fileBytes,
+          selectedTheme.themeId,
+        );
       } else if (fileExtension == 'json') {
-        importedCount = await _themeService.importWordsFromJson(fileBytes, selectedTheme.themeId);
+        importedCount = await _themeService.importWordsFromJson(
+          fileBytes,
+          selectedTheme.themeId,
+        );
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$importedCount개의 단어를 \'${selectedTheme.name}\' 테마에 추가했습니다.'),
+          content: Text(
+            '$importedCount개의 단어를 \'${selectedTheme.name}\' 테마에 추가했습니다.',
+          ),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('파일 가져오기 중 오류가 발생했습니다: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('파일 가져오기 중 오류가 발생했습니다: $e')));
     }
   }
 
@@ -127,11 +169,13 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
       appBar: AppBar(
         title: const Text('테마 선택'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.file_upload),
-            onPressed: _importWords,
-            tooltip: 'CSV/JSON 파일에서 단어 가져오기',
-          ),
+          // 💡 6. 관리자(_isAdmin == true)일 때만 버튼 표시
+          if (_isAdmin)
+            IconButton(
+              icon: const Icon(Icons.file_upload),
+              onPressed: _importWords,
+              tooltip: 'CSV/JSON 파일에서 단어 가져오기 (관리자 전용)',
+            ),
         ],
       ),
       body: FutureBuilder<List<ThemeModel>>(
