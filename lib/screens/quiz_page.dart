@@ -318,7 +318,7 @@ class _QuizPageState extends State<QuizPage> {
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('테마 선택으로'),
+                    child: const Text('퀴즈풀기 화면으로'),
                   ),
                 ],
               ),

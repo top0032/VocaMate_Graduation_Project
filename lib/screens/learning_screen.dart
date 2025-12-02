@@ -206,7 +206,7 @@ class _LearningScreenState extends State<LearningScreen> {
         setState(() => _isFavorite = true); // 별표 채우기
         Navigator.pop(context); // 다이얼로그 닫기
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('예문이 단어장(즐겨찾기)에 저장되었습니다.')),
+          const SnackBar(content: Text('예문이 나만의 단어장에 저장되었습니다.')),
         );
       }
     } catch (e) {
@@ -296,7 +296,7 @@ class _LearningScreenState extends State<LearningScreen> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Gemini 심화 예문', style: TextStyle(fontSize: 18)),
+              const Text('생성된 예문', style: TextStyle(fontSize: 18)),
               IconButton(
                 icon: const Icon(Icons.volume_up, color: Colors.teal),
                 onPressed: () => _speak(text, speed: 1.0),
@@ -307,7 +307,7 @@ class _LearningScreenState extends State<LearningScreen> {
           actions: <Widget>[
             TextButton.icon(
               icon: const Icon(Icons.save_alt),
-              label: const Text('저장 (나만의 단어장)'),
+              label: const Text('저장'),
               onPressed: () => _saveGeminiResult(text),
             ),
             TextButton(
@@ -440,7 +440,7 @@ class _LearningScreenState extends State<LearningScreen> {
                       ElevatedButton.icon(
                         onPressed: _isLoading ? null : _showGeminiExample,
                         icon: const Icon(Icons.lightbulb_outline),
-                        label: const Text('심화 학습 (Gemini 예문 생성)'),
+                        label: const Text('예문 생성'),
                       ),
                       const SizedBox(height: 32),
                       Row(
