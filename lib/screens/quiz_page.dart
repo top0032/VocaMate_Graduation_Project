@@ -47,7 +47,10 @@ class QuizPage extends StatefulWidget {
     this.words,
     required this.numberOfQuestions,
     required this.quizTitle,
-  }) : assert(theme != null || words != null, 'Either theme or words must be provided.');
+  }) : assert(
+         theme != null || words != null,
+         'Either theme or words must be provided.',
+       );
 
   @override
   State<QuizPage> createState() => _QuizPageState();
@@ -80,9 +83,11 @@ class _QuizPageState extends State<QuizPage> {
         fetchedWords = widget.words!;
       } else {
         // 기존처럼 테마 ID로 단어를 가져오는 경우
-        fetchedWords = await _themeService.getWordsByTheme(widget.theme!.themeId);
+        fetchedWords = await _themeService.getWordsByTheme(
+          widget.theme!.themeId,
+        );
       }
-      
+
       if (mounted) {
         setState(() {
           _allWords = fetchedWords;
@@ -98,16 +103,17 @@ class _QuizPageState extends State<QuizPage> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('단어 로딩 중 오류가 발생했습니다: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('단어 로딩 중 오류가 발생했습니다: $e')));
       }
     }
   }
 
   void _prepareQuizWords() {
     _allWords.shuffle(_random);
-    if (widget.numberOfQuestions > 0 && widget.numberOfQuestions < _allWords.length) {
+    if (widget.numberOfQuestions > 0 &&
+        widget.numberOfQuestions < _allWords.length) {
       _quizWords = _allWords.take(widget.numberOfQuestions).toList();
     } else {
       _quizWords = List.from(_allWords); // 원본 리스트 수정을 방지하기 위해 복사
@@ -119,10 +125,12 @@ class _QuizPageState extends State<QuizPage> {
 
     final currentWord = _quizWords[_currentIndex];
     _correctAnswerMeaning = currentWord.meaning;
-    
+
     // 전체 단어 목록에서 오답 선택지를 생성 (테마 단어 + 나만의 단어장 단어 모두 포함 가능)
     List<String> incorrectMeanings = [];
-    List<WordModel> otherWords = _allWords.where((word) => word.word != currentWord.word).toList();
+    List<WordModel> otherWords = _allWords
+        .where((word) => word.word != currentWord.word)
+        .toList();
     otherWords.shuffle(_random);
 
     for (int i = 0; i < 3 && i < otherWords.length; i++) {
@@ -134,7 +142,7 @@ class _QuizPageState extends State<QuizPage> {
 
     _selectedAnswer = null;
   }
-  
+
   void _selectAnswer(String selectedMeaning) {
     setState(() {
       _selectedAnswer = selectedMeaning;
@@ -143,20 +151,22 @@ class _QuizPageState extends State<QuizPage> {
 
   void _nextQuestion() {
     if (_selectedAnswer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('답변을 선택해주세요!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('답변을 선택해주세요!')));
       return;
     }
 
     final currentWord = _quizWords[_currentIndex];
     final bool wasCorrect = _selectedAnswer == _correctAnswerMeaning;
-    _results.add(QuizResult(
-      questionWord: currentWord,
-      selectedAnswer: _selectedAnswer!,
-      correctAnswer: _correctAnswerMeaning!,
-      wasCorrect: wasCorrect,
-    ));
+    _results.add(
+      QuizResult(
+        questionWord: currentWord,
+        selectedAnswer: _selectedAnswer!,
+        correctAnswer: _correctAnswerMeaning!,
+        wasCorrect: wasCorrect,
+      ),
+    );
 
     if (_currentIndex >= _quizWords.length - 1) {
       // 퀴즈가 끝나면 결과 저장
@@ -231,7 +241,9 @@ class _QuizPageState extends State<QuizPage> {
     };
 
     try {
-      await FirebaseFirestore.instance.collection('quiz_attempts').add(attemptData);
+      await FirebaseFirestore.instance
+          .collection('quiz_attempts')
+          .add(attemptData);
     } catch (e) {
       print('퀴즈 결과 저장 실패: $e');
       // 사용자에게 피드백을 주지 않아도 괜찮음 (백그라운드 작업)
@@ -280,8 +292,13 @@ class _QuizPageState extends State<QuizPage> {
                 itemBuilder: (context, index) {
                   final result = _results[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: result.wasCorrect ? Colors.green.shade50 : Colors.red.shade50,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: result.wasCorrect
+                        ? Colors.green.shade50
+                        : Colors.red.shade50,
                     child: ListTile(
                       leading: Icon(
                         result.wasCorrect ? Icons.check_circle : Icons.cancel,
@@ -354,7 +371,9 @@ class _QuizPageState extends State<QuizPage> {
             const SizedBox(height: 30),
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 height: 150,
@@ -373,7 +392,9 @@ class _QuizPageState extends State<QuizPage> {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey[100],
+                    backgroundColor: isSelected
+                        ? AppTheme.primaryColor
+                        : Colors.grey[100],
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -390,18 +411,21 @@ class _QuizPageState extends State<QuizPage> {
               );
             }).toList(),
             const Spacer(),
-            ElevatedButton(
-              onPressed: _selectedAnswer != null ? _nextQuestion : null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: ElevatedButton(
+                onPressed: _selectedAnswer != null ? _nextQuestion : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              child: Text(
-                _currentIndex < _quizWords.length - 1 ? '다음 문제' : '결과 보기',
-                style: AppTheme.themeData.textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
+                child: Text(
+                  _currentIndex < _quizWords.length - 1 ? '다음 문제' : '결과 보기',
+                  style: AppTheme.themeData.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
