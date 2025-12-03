@@ -69,12 +69,6 @@ class _MainScreenState extends State<MainScreen> {
         title: const Text('VocaMate 홈'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: 설정 화면으로 이동
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _logout(context),
             tooltip: '로그아웃',

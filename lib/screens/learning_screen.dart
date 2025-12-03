@@ -205,9 +205,9 @@ class _LearningScreenState extends State<LearningScreen> {
       if (mounted) {
         setState(() => _isFavorite = true); // 별표 채우기
         Navigator.pop(context); // 다이얼로그 닫기
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('예문이 단어장(즐겨찾기)에 저장되었습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('예문이 나만의 단어장에 저장되었습니다.')));
       }
     } catch (e) {
       print('Save Error: $e');
@@ -296,7 +296,7 @@ class _LearningScreenState extends State<LearningScreen> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Gemini 심화 예문', style: TextStyle(fontSize: 18)),
+              const Text('생성된 예문', style: TextStyle(fontSize: 18)),
               IconButton(
                 icon: const Icon(Icons.volume_up, color: Colors.teal),
                 onPressed: () => _speak(text, speed: 1.0),
@@ -307,7 +307,7 @@ class _LearningScreenState extends State<LearningScreen> {
           actions: <Widget>[
             TextButton.icon(
               icon: const Icon(Icons.save_alt),
-              label: const Text('저장 (나만의 단어장)'),
+              label: const Text('저장'),
               onPressed: () => _saveGeminiResult(text),
             ),
             TextButton(
@@ -417,10 +417,12 @@ class _LearningScreenState extends State<LearningScreen> {
                                 );
                               },
                           child: _isFlipped
-                              ? FlashCard(
+                              ? FlashCardBack(
                                   key: const ValueKey(true),
-                                  text: currentWord!.meaning,
-                                  isFront: false,
+                                  meaning: currentWord!.meaning,
+                                  partOfSpeech: currentWord.partOfSpeech,
+                                  phoneticUS: currentWord.phoneticUS,
+                                  phoneticUK: currentWord.phoneticUK,
                                   onSpeak: () => _speak(currentWord.meaning),
                                 )
                               : FlashCard(
@@ -440,7 +442,7 @@ class _LearningScreenState extends State<LearningScreen> {
                       ElevatedButton.icon(
                         onPressed: _isLoading ? null : _showGeminiExample,
                         icon: const Icon(Icons.lightbulb_outline),
-                        label: const Text('심화 학습 (Gemini 예문 생성)'),
+                        label: const Text('예문 생성'),
                       ),
                       const SizedBox(height: 32),
                       Row(
@@ -465,6 +467,80 @@ class _LearningScreenState extends State<LearningScreen> {
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class FlashCardBack extends StatelessWidget {
+  final String meaning;
+  final String partOfSpeech;
+  final String phoneticUK;
+  final String phoneticUS;
+  final VoidCallback onSpeak;
+
+  const FlashCardBack({
+    super.key,
+    required this.meaning,
+    required this.partOfSpeech,
+    required this.phoneticUK,
+    required this.phoneticUS,
+    required this.onSpeak,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 10,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: 300,
+        alignment: Alignment.center,
+        child: Stack(
+          children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      meaning,
+                      textAlign: TextAlign.center,
+                      style: AppTheme.themeData.textTheme.displaySmall,
+                    ),
+                    const SizedBox(height: 20),
+                    if (partOfSpeech.isNotEmpty)
+                      Text(
+                        '[$partOfSpeech]',
+                        style: AppTheme.themeData.textTheme.titleLarge,
+                      ),
+                    const SizedBox(height: 10),
+                    if (phoneticUS.isNotEmpty)
+                      Text(
+                        '미국식: $phoneticUS',
+                        style: AppTheme.themeData.textTheme.titleMedium,
+                      ),
+                    if (phoneticUK.isNotEmpty)
+                      Text(
+                        '영국식: $phoneticUK',
+                        style: AppTheme.themeData.textTheme.titleMedium,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.volume_up, size: 30),
+                onPressed: onSpeak,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

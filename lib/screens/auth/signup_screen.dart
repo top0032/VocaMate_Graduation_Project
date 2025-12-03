@@ -168,7 +168,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                     child: const Text(
-                      '3. 본인 인증하기',
+                      '본인인증',
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),

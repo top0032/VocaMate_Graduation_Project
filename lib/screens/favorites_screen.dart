@@ -67,7 +67,7 @@ class FavoritesScreen extends StatelessWidget {
           final docs = snapshot.data!.docs;
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
