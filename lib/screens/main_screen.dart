@@ -68,6 +68,7 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         title: const Text('VocaMate 홈'),
         actions: [
+          // 💡 설정 버튼 삭제됨
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _logout(context),
@@ -136,7 +137,7 @@ class _MainScreenState extends State<MainScreen> {
 
                   // 💡 퀴즈 메뉴
                   MenuCard(
-                    title: '퀴즈 풀기',
+                    title: '퀴즈',
                     icon: Icons.quiz,
                     onTap: () {
                       Navigator.push(
@@ -199,6 +200,7 @@ class MenuCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // 전달받은 색상이 없으면 기본 테마 색상 사용
             Icon(icon, size: 48, color: iconColor ?? AppTheme.primaryColor),
             const SizedBox(height: 16),
             Text(title, style: AppTheme.themeData.textTheme.headlineSmall),
